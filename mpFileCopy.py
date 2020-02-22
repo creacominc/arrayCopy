@@ -28,7 +28,7 @@ class LeafFinder:
     m_sourcePath = ""
     m_targetPath = ""
     m_logLevel   = logging.INFO
-    m_dry = False
+    m_dry = True
     m_move = False
 
 
@@ -168,7 +168,7 @@ if __name__ == '__main__':
     parser.add_argument( "--source", "-s", metavar="srcPath", help="Source Path", required=True )
     parser.add_argument( "--target", "-t", metavar="trgPath", help="Target Path", required=True )
     parser.add_argument( "--threads", "-n", metavar="threads", help="Number of threads", default=1 )
-    parser.add_argument( "--dry", "-d", help="Perform a Dry Run", action='store_true', default=False, required=False )
+    parser.add_argument( "--execute", "-x", help="Perform the copy/move rather than a dry run.", action='store_true', default=False, required=False )
     parser.add_argument( "--move", "-m", help="Move files", action='store_true', default=False, required=False )
     parser.add_argument( "--log", "-l", dest="loglevel", metavar="loglevel", help="Log leval as WARN, INFO, DEBUG, etc", default="INFO" )
     args = parser.parse_args()
@@ -178,6 +178,6 @@ if __name__ == '__main__':
     if not isinstance( numeric_level, int ):
         raise ValueError( f"Invalid log level: {args.loglevel}" )
     logging.basicConfig( filename="mpFileCopy.log", level=numeric_level )
-    leafFinder = LeafFinder( args.source, args.target, args.threads, args.dry, args.move, numeric_level )
+    leafFinder = LeafFinder( args.source, args.target, args.threads, not args.execute, args.move, numeric_level )
     sys.exit( leafFinder.run() )
 
