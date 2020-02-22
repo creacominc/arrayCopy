@@ -30,15 +30,16 @@ class LeafFinder:
     m_logLevel   = logging.INFO
     m_dry = True
     m_move = False
+    m_fast = False
 
-
-    def __init__( self, src, trg, thrds, dry, move, level ):
+    def __init__( self, src, trg, thrds, dry, move, fast, level ):
         self.m_threads = int(thrds)
         self.m_sourcePath = src
         self.m_targetPath = trg
         self.m_nodes = []
         self.m_dry = dry
         self.m_move = move
+        self.m_fast = fast
         self.m_logLevel = level
 
     def confirmFolderExists( self, path ) -> bool:
@@ -75,21 +76,24 @@ class LeafFinder:
         # create target folder if it does not exist
         if not os.path.isdir( trg ):
             os.makedirs( trg, mode=0o775, exist_ok=True )
-        # -e ssh -T -c arcfour -o Compression=no
-        #  --progress
-        cmdpre = 'rsync   -v -v --progress  --perms --links --times --itemize-changes --stats'
-        cmdpre += ' --backup --suffix=.backup  --exclude=.DS_Store --exclude=.Trashes --exclude=.Trash'
-        cmdpre += ' --exclude=._.Trashes --exclude=.localized --exclude=.DocumentRevisions-*'
-        cmdpre += ' --exclude=.Spotlight* --exclude=.fseventsd --exclude=.apdisk'
-        cmdpre += ' --exclude=.com.apple.timemachine.donotpresent --exclude=.fcplock --exclude=.fcpuser'
-        cmdpre += ' --exclude=.fseventsd --exclude=.cache --exclude=._.TemporaryItems --exclude=._.apdisk'
-        cmdpre += ' --exclude=.TemporaryItems'
+        cmdpre = 'rsync   '
         # add dry-run if specified
         if self.m_dry:
             cmdpre += ' --dry-run '
         # add move if specified
         if self.m_move:
             cmdpre += ' --remove-source-files '
+        # if not fast, use checksum
+        if not self.m_fast:
+            cmdpre += ' --checksum '
+        #
+        cmdpre += ' -v -v --progress  --perms --links --times --itemize-changes --stats'
+        cmdpre += ' --backup --suffix=.backup  --exclude=.DS_Store --exclude=.Trashes --exclude=.Trash'
+        cmdpre += ' --exclude=._.Trashes --exclude=.localized --exclude=.DocumentRevisions-*'
+        cmdpre += ' --exclude=.Spotlight* --exclude=.fseventsd --exclude=.apdisk'
+        cmdpre += ' --exclude=.com.apple.timemachine.donotpresent --exclude=.fcplock --exclude=.fcpuser'
+        cmdpre += ' --exclude=.fseventsd --exclude=.cache --exclude=._.TemporaryItems --exclude=._.apdisk'
+        cmdpre += ' --exclude=.TemporaryItems'
         #
         cmdfilt0='--filter=dir-merge /.rsync.include'
         cmdfilt1='--filter=dir-merge /.rsync.exclude'
@@ -170,6 +174,7 @@ if __name__ == '__main__':
     parser.add_argument( "--threads", "-n", metavar="threads", help="Number of threads", default=1 )
     parser.add_argument( "--execute", "-x", help="Perform the copy/move rather than a dry run.", action='store_true', default=False, required=False )
     parser.add_argument( "--move", "-m", help="Move files", action='store_true', default=False, required=False )
+    parser.add_argument( "--fast", "-f", help="Fast compare - no checksum", action='store_true', default=False, required=False )
     parser.add_argument( "--log", "-l", dest="loglevel", metavar="loglevel", help="Log leval as WARN, INFO, DEBUG, etc", default="INFO" )
     args = parser.parse_args()
     numeric_level = getattr(logging, args.loglevel.upper(), None )
@@ -178,6 +183,6 @@ if __name__ == '__main__':
     if not isinstance( numeric_level, int ):
         raise ValueError( f"Invalid log level: {args.loglevel}" )
     logging.basicConfig( filename="mpFileCopy.log", level=numeric_level )
-    leafFinder = LeafFinder( args.source, args.target, args.threads, not args.execute, args.move, numeric_level )
+    leafFinder = LeafFinder( args.source, args.target, args.threads, not args.execute, args.move, args.fast, numeric_level )
     sys.exit( leafFinder.run() )
 

@@ -10,8 +10,7 @@
             "args":  [
                 "--source", "/Volumes/CCMv/fromBackups",
                 "--target", "/Volumes/BackupCCMv/fromBackups",
-                "--threads", "3",
-                "--dry"
+                "--threads", "3"
             ]
         }
     ]
