@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.8
 
 """
 Given a source path and a destination path where the last element of the path matches,
@@ -114,7 +114,7 @@ class LeafFinder:
         for line in res.stdout.decode("latin-1").split('\n'):
             print( line )
             logging.info( line )
-        return( src )
+        return( f'{os.getpid()},\t  {src}' )
 
     def worker_init(self):
         pidName = f'mpFileCopy.{ os.getpid() }.log'
