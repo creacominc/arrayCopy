@@ -17,6 +17,7 @@ from multiprocessing import Pool
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 
 class ERR(Enum):
+    OK = 0
     SOURCE_PATH_DOES_NOT_EXIST = auto()
     TARGET_PATH_DOES_NOT_EXIST = auto()
     SOURCE_TARGET_MISMATCH = auto()
@@ -31,8 +32,9 @@ class LeafFinder:
     m_dry = True
     m_move = False
     m_fast = False
+    m_create = False
 
-    def __init__( self, src, trg, thrds, dry, move, fast, level ):
+    def __init__( self, src, trg, thrds, dry, move, fast, level, create ):
         self.m_threads = int(thrds)
         self.m_sourcePath = src
         self.m_targetPath = trg
@@ -41,6 +43,7 @@ class LeafFinder:
         self.m_move = move
         self.m_fast = fast
         self.m_logLevel = level
+        self.m_create = create
 
     def confirmFolderExists( self, path ) -> bool:
         """ return true if the path is a folder that exists """
@@ -133,20 +136,25 @@ class LeafFinder:
         """Verify that the source and target exist and are the same folder name, then find the leaf nodes of the source."""
         logger = logging.getLogger()
         logger.info( f" ========================================  start: {datetime.now()}" )
-        if not self.confirmFolderExists( self.m_sourcePath ):
-            logger.error( f"Source path does not exist: {self.m_sourcePath}" )
-            logger.info( f" ========================================    end: {datetime.now()}" )
-            return ERR.SOURCE_PATH_DOES_NOT_EXIST
-        if not self.confirmFolderExists( self.m_targetPath ):
-            logger.error( f"Target path does not exist: {self.m_targetPath}" )
-            logger.info( f" ========================================    end: {datetime.now()}" )
-            return ERR.TARGET_PATH_DOES_NOT_EXIST
         if not self.leafNodesMatch( self.m_sourcePath, self.m_targetPath ):
             logger.error( f"Source and Target must have the same starting point." )
             logger.info( f"Source = {self.m_sourcePath}" )
             logger.info( f"Target = {self.m_targetPath}" )
             logger.info( f" ========================================    end: {datetime.now()}" )
             return ERR.SOURCE_TARGET_MISMATCH
+        if not self.confirmFolderExists( self.m_sourcePath ):
+            logger.error( f"Source path does not exist: {self.m_sourcePath}" )
+            logger.info( f" ========================================    end: {datetime.now()}" )
+            return ERR.SOURCE_PATH_DOES_NOT_EXIST
+        if not self.confirmFolderExists( self.m_targetPath ):
+            logger.error( f"Target path does not exist: {self.m_targetPath}" )
+            # if the user specified --create, create the directory hierarchy
+            if self.m_create:
+                logger.info( f"Creating target path: {self.m_targetPath}" )
+                os.makedirs( self.m_targetPath, mode=0o755, exist_ok=True )
+            else:
+                logger.info( f" ========================================    end: {datetime.now()}" )
+                return ERR.TARGET_PATH_DOES_NOT_EXIST
         logger.info( f"Source = {self.m_sourcePath}" )
         logger.info( f"Target = {self.m_targetPath}" )
         logger.info( f"Threads = {self.m_threads}" )
@@ -154,6 +162,7 @@ class LeafFinder:
         logger.info( f" ======================================== listed: {datetime.now()}" )
         self.mpRsyncCopy()
         logger.info( f" ========================================    end: {datetime.now()}" )
+        return ERR.OK
 
 
 
@@ -176,6 +185,7 @@ if __name__ == '__main__':
     parser.add_argument( "--move", "-m", help="Move files", action='store_true', default=False, required=False )
     parser.add_argument( "--fast", "-f", help="Fast compare - no checksum", action='store_true', default=False, required=False )
     parser.add_argument( "--log", "-l", dest="loglevel", metavar="loglevel", help="Log leval as WARN, INFO, DEBUG, etc", default="INFO" )
+    parser.add_argument( "--create", "-c", help="Create target folder if missing", action='store_true', default=False, required=False )
     args = parser.parse_args()
     numeric_level = getattr(logging, args.loglevel.upper(), None )
     #
@@ -183,6 +193,6 @@ if __name__ == '__main__':
     if not isinstance( numeric_level, int ):
         raise ValueError( f"Invalid log level: {args.loglevel}" )
     logging.basicConfig( filename="mpFileCopy.log", level=numeric_level )
-    leafFinder = LeafFinder( args.source, args.target, args.threads, not args.execute, args.move, args.fast, numeric_level )
+    leafFinder = LeafFinder( args.source, args.target, args.threads, not args.execute, args.move, args.fast, numeric_level, args.create )
     sys.exit( leafFinder.run() )
 

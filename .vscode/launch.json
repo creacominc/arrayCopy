@@ -8,9 +8,9 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args":  [
-                "--source", "/Volumes/CCMv/fromBackups",
-                "--target", "/Volumes/BackupCCMv/fromBackups",
-                "--threads", "3"
+                "--source", "/tmp/test/source",
+                "--target", "/tmp/test/target/source",
+                "--threads", "2"
             ]
         }
     ]
