@@ -34,6 +34,12 @@ class LeafFinder:
     m_fast = False
     m_create = False
 
+    m_ignoreFiles = [ ".DocumentRevisions-V100",
+                      ".Spotlight-V100",
+                      ".TemporaryItems",
+                      ".Trashes",
+                    ]
+
     def __init__( self, src, trg, thrds, dry, move, fast, level, create ):
         self.m_threads = int(thrds)
         self.m_sourcePath = src
@@ -61,6 +67,10 @@ class LeafFinder:
 
     def findAllLeafNodes( self, currentPath ):
         logger = logging.getLogger()
+        # if the current is ".DocumentRevisions-V100", skip it
+        if currentPath in self.m_ignoreFiles:
+            logger.warning( f'Ignoring { os.path.join( self.m_sourcePath, currentPath ) }')
+            return
         # if the path is a folder, iterate of the contents can call this function recursively
         fullCurrent = os.path.join( self.m_sourcePath, currentPath )
         if os.path.isdir( fullCurrent ):
@@ -167,12 +177,19 @@ class LeafFinder:
 
 
 def logger_init( logLevel ):
+    # add rotating file handler
     rfh = RotatingFileHandler( filename='mpFileCopy.control.log', mode='a', maxBytes=1024000000, backupCount=9 )
     rfh.doRollover()
     rfh.setFormatter(logging.Formatter("%(levelname)s: %(asctime)s - %(process)s - %(message)s"))
+    rfh.setLevel( logLevel )
     logger = logging.getLogger()
     logger.setLevel( logLevel )
     logger.addHandler( rfh )
+    # add stdout handler
+    sh = logging.StreamHandler( sys.stdout )
+    sh.setFormatter(logging.Formatter("%(levelname)s: %(asctime)s - %(process)s - %(message)s"))
+    sh.setLevel( logging.INFO )
+    logger.addHandler( sh )
     logging.info( f' ==================== { datetime.now() }')
 
 
