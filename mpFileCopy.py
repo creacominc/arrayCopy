@@ -40,7 +40,8 @@ class LeafFinder:
                       ".TemporaryItems",
                       ".Trashes",
                       ".fseventsd",
-                      ".DS_Store"
+                      ".DS_Store",
+                      ".apdisk"
                     ]
 
     def __init__( self, src, trg, thrds, dry, move, fast, level, create ):
@@ -118,8 +119,8 @@ class LeafFinder:
         cmd = cmdpre + ' ' + cmdfilt0 + ' ' + cmdfilt1 + ' "' + src + '" "' + trg + '"'
         filesize = os.path.getsize( src )
         starttime = timeit.default_timer()
-        logging.info( f'================== { datetime.now() }, size = {filesize/1024000000.0:.03} G, file = {src} ========== {cmd}' )
-        print( f'================== { datetime.now() }, size = {filesize/1024000000.0:.03} G, file = {src} ========== {cmd}' )
+        logging.info( f'================== { datetime.now() }, size = {filesize/1024000000.0:.03f} G, file = {src} ========== {cmd}' )
+        print( f'================== { datetime.now() }, size = {filesize/1024000000.0:.03f} G, file = {src} ========== {cmd}' )
         cmdArr = cmdpre.split()
         cmdArr += [ cmdfilt0, cmdfilt1, src, trg ]
         res = subprocess.run( cmdArr, capture_output=True, text=False )
@@ -137,8 +138,8 @@ class LeafFinder:
             rateMBps = filesize / 1024000.0 / delta
         else:
             rateMBps = 0.0
-        logging.info( f'================== endTime = { datetime.now() }, rate = {rateMBps:.03} MBps, duration = {delta:.03} s, size = {filesize/1024000000.0:.03} G, file = {src}' )
-        print( f'================== endTime = { datetime.now() }, rate = {rateMBps:.03} MBps, duration = {delta:.03} s, size = {filesize/1024000000.0:.03} G, file = {src}' )
+        logging.info( f'================== endTime = { datetime.now() }, rate = {rateMBps:.03f} MBps, duration = {delta:.03f} s, size = {filesize/1024000000.0:.03f} G, file = {src}' )
+        print( f'================== endTime = { datetime.now() }, rate = {rateMBps:.03f} MBps, duration = {delta:.03f} s, size = {filesize/1024000000.0:.03f} G, file = {src}' )
         return( f'{os.getpid()},\t{datetime.now()},\t{src}' )
 
     def worker_init(self):
