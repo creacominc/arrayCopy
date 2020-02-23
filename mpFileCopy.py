@@ -190,7 +190,7 @@ class LeafFinder:
 def logger_init( logLevel ):
     logFilePath = 'mpFileCopy.control.log'
     # add rotating file handler
-    rfh = RotatingFileHandler( filename=logFilePath, mode='a', maxBytes=1024000000, backupCount=9 )
+    rfh = RotatingFileHandler( filename=logFilePath, mode='a', maxBytes=10240000, backupCount=9 )
     # if the log file already exists and is not empty, do a rollover
     if( os.path.exists( logFilePath ) and os.path.getsize( logFilePath ) ):
         rfh.doRollover()
