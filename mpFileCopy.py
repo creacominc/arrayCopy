@@ -133,8 +133,9 @@ class LeafFinder:
             logging.info( line )
         endtime = timeit.default_timer()
         delta = endtime - starttime
-        logging.info( f'================== endTime={ datetime.now() }, duration={delta:.0}s, size={filesize/1024000000.0:.3f}G, file={src}' )
-        print( f'================== endTime={ datetime.now() }, duration={delta:.0}s, size={filesize/1024000000.0:.3f}G, file={src}' )
+        rateMBps = filesize / 1024000.0 / delta
+        logging.info( f'================== endTime={ datetime.now() }, rate={rateMBps:.03}MBps, duration={delta:.3f}s, size={filesize/1024000000.0:.3f}G, file={src}' )
+        print( f'================== endTime={ datetime.now() }, rate={rateMBps:.03}MBps, duration={delta:.3f}s, size={filesize/1024000000.0:.3f}G, file={src}' )
         return( f'{os.getpid()},\t{datetime.now()},\t{src}' )
 
     def worker_init(self):
