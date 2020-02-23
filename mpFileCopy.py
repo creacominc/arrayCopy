@@ -70,8 +70,8 @@ class LeafFinder:
 
     def findAllLeafNodes( self, currentPath ):
         logger = logging.getLogger()
-        # if the current is ".DocumentRevisions-V100", skip it
-        if currentPath in self.m_ignoreFiles:
+        # if the current is in the ignore  list, skip it
+        if os.path.basename( currentPath ) in self.m_ignoreFiles:
             logger.warning( f'Ignoring { os.path.join( self.m_sourcePath, currentPath ) }')
             return
         # if the path is a folder, iterate of the contents can call this function recursively
