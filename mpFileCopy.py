@@ -100,7 +100,9 @@ class LeafFinder:
         if not self.m_fast:
             cmdpre += ' --checksum '
         #
-        cmdpre += ' -v -v --progress  --perms --links --times --itemize-changes --stats'
+        # --progress
+        #
+        cmdpre += ' -v -v  --perms --links --times --itemize-changes --stats'
         cmdpre += ' --backup --suffix=.backup  --exclude=.DS_Store --exclude=.Trashes --exclude=.Trash'
         cmdpre += ' --exclude=._.Trashes --exclude=.localized --exclude=.DocumentRevisions-*'
         cmdpre += ' --exclude=.Spotlight* --exclude=.fseventsd --exclude=.apdisk'
