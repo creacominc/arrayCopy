@@ -15,6 +15,7 @@ from enum import Enum, auto
 import multiprocessing
 from multiprocessing import Pool
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
+import timeit
 
 class ERR(Enum):
     OK = 0
@@ -38,6 +39,8 @@ class LeafFinder:
                       ".Spotlight-V100",
                       ".TemporaryItems",
                       ".Trashes",
+                      ".fseventsd",
+                      ".DS_Store"
                     ]
 
     def __init__( self, src, trg, thrds, dry, move, fast, level, create ):
@@ -113,8 +116,10 @@ class LeafFinder:
         cmdfilt0='--filter=dir-merge /.rsync.include'
         cmdfilt1='--filter=dir-merge /.rsync.exclude'
         cmd = cmdpre + ' ' + cmdfilt0 + ' ' + cmdfilt1 + ' "' + src + '" "' + trg + '"'
-        logging.info( f' ========== {cmd}' )
-        print( f' ========== {cmd}' )
+        filesize = os.path.getsize( src )
+        starttime = timeit.default_timer()
+        logging.info( f'================== { datetime.now() }, size={filesize/1024000000.0:.3f}G, file={src} ========== {cmd}' )
+        print( f'================== { datetime.now() }, size={filesize/1024000000.0:.3f}G, file={src} ========== {cmd}' )
         cmdArr = cmdpre.split()
         cmdArr += [ cmdfilt0, cmdfilt1, src, trg ]
         res = subprocess.run( cmdArr, capture_output=True, text=False )
@@ -126,7 +131,11 @@ class LeafFinder:
         for line in res.stdout.decode("latin-1").split('\n'):
             print( line )
             logging.info( line )
-        return( f'{os.getpid()},\t  {src}' )
+        endtime = timeit.default_timer()
+        delta = endtime - starttime
+        logging.info( f'================== endTime={ datetime.now() }, duration={delta:.0}s, size={filesize/1024000000.0:.3f}G, file={src}' )
+        print( f'================== endTime={ datetime.now() }, duration={delta:.0}s, size={filesize/1024000000.0:.3f}G, file={src}' )
+        return( f'{os.getpid()},\t{datetime.now()},\t{src}' )
 
     def worker_init(self):
         pidName = f'mpFileCopy.{ os.getpid() }.log'
@@ -179,9 +188,12 @@ class LeafFinder:
 
 
 def logger_init( logLevel ):
+    logFilePath = 'mpFileCopy.control.log'
     # add rotating file handler
-    rfh = RotatingFileHandler( filename='mpFileCopy.control.log', mode='a', maxBytes=1024000000, backupCount=9 )
-    rfh.doRollover()
+    rfh = RotatingFileHandler( filename=logFilePath, mode='a', maxBytes=1024000000, backupCount=9 )
+    # if the log file already exists and is not empty, do a rollover
+    if( os.path.exists( logFilePath ) and os.path.getsize( logFilePath ) ):
+        rfh.doRollover()
     rfh.setFormatter(logging.Formatter("%(levelname)s: %(asctime)s - %(process)s - %(message)s"))
     rfh.setLevel( logLevel )
     logger = logging.getLogger()
