@@ -152,7 +152,7 @@ class LeafFinder:
         return( ( os.getpid(), filePath, datetime.now() ) )
 
     def worker_init(self) -> None:
-        pidName = os.path.join( self.m_tmpdir, f'mpFileCopy.{ os.getpid() }.log' )
+        pidName = os.path.join( self.m_tmpdir, f'mtFileCopy.{ os.getpid() }.log' )
         logging.basicConfig( filename=pidName, level=self.m_logLevel )
         logger = logging.getLogger()
         logger.setLevel( self.m_logLevel )
@@ -287,9 +287,9 @@ def logger_init( logLevel, tmpdir ):
             except PermissionError:
                 print( f'Error creating tmpdir folder {tmpdir}.  Please check --tmp parameter.')
                 return ERR.PERMISSION_ERROR
-        logFilePath = os.path.join( tmpdir, 'mpFileCopy.control.log' )
+        logFilePath = os.path.join( tmpdir, 'mtFileCopy.control.log' )
     else:
-        logFilePath = 'mpFileCopy.control.log'
+        logFilePath = 'mtFileCopy.control.log'
     # add rotating file handler
     rfh = RotatingFileHandler( filename=logFilePath, mode='a', maxBytes=1024000, backupCount=9 )
     # if the log file already exists and is not empty, do a rollover
@@ -323,7 +323,7 @@ if __name__ == '__main__':
     parser.add_argument( "--log", "-l", dest="loglevel", metavar="loglevel", help="Log leval as WARN, INFO, DEBUG, etc", default="INFO" )
     parser.add_argument( "--tmpdir", "-T", help="Location of logs and work queue.  Default is current folder.", default="." )
     parser.add_argument( "--create", "-c", help="Create target folder if missing", action='store_true', default=False, required=False )
-    parser.add_argument( "--queue", "-q", help="Use list from and write to this queue file.  Default is mpFileCopy.queue", default="mpFileCopy.queue", required=False )
+    parser.add_argument( "--queue", "-q", help="Use list from and write to this queue file.  Default is mtFileCopy.queue", default="mtFileCopy.queue", required=False )
     args = parser.parse_args()
     numeric_level = getattr(logging, args.loglevel.upper(), None )
     #
@@ -331,8 +331,7 @@ if __name__ == '__main__':
     if( ERR.OK == rcode ):
         if not isinstance( numeric_level, int ):
             raise ValueError( f"Invalid log level: {args.loglevel}" )
-        logging.basicConfig( filename="mpFileCopy.log", level=numeric_level )
+        logging.basicConfig( filename="mtFileCopy.log", level=numeric_level )
         leafFinder = LeafFinder( args )
         rcode = leafFinder.run()
     exit( rcode )
-
