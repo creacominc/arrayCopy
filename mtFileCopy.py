@@ -32,7 +32,6 @@ class LeafFinder:
     m_sourcePath = ""
     m_targetPath = ""
     m_nodes = []
-    m_copy_of_nodes = []
     m_logLevel   = logging.INFO
     m_dry = True
     m_move = False
@@ -55,7 +54,6 @@ class LeafFinder:
         self.m_sourcePath = args.source
         self.m_targetPath = args.target
         self.m_nodes = []
-        self.m_copy_of_nodes = []
         self.m_dry = not args.execute
         self.m_move = args.move
         self.m_fast = args.fast
@@ -99,7 +97,7 @@ class LeafFinder:
         logger = logging.getLogger()
         src = os.path.join( self.m_sourcePath, filePath )
         trg = os.path.dirname( os.path.join( self.m_targetPath, filePath ) )
-        logger.debug( f"Copying src={src}\n\ttrg={trg}" )
+        logger.debug( f"Copying src = {src}\n\ttrg = {trg}" )
         # create target folder if it does not exist
         if not os.path.isdir( trg ):
             os.makedirs( trg, mode=0o775, exist_ok=True )
@@ -149,8 +147,6 @@ class LeafFinder:
         else:
             rateMBps = 0.0
         logger.info( f'================== endTime = { datetime.now() }, rate = {rateMBps:.03f} MBps, duration = {delta:.03f} s, size = {filesize/1024000000.0:.03f} G, file = {src}' )
-        print( f'================== endTime = { datetime.now() }, rate = {rateMBps:.03f} MBps, duration = {delta:.03f} s, size = {filesize/1024000000.0:.03f} G, file = {src}' )
-        #return( f'{os.getpid()},\t{datetime.now()},\t{src}' )
         return( ( os.getpid(), filePath, datetime.now() ) )
 
     def worker_init(self) -> None:
@@ -160,12 +156,12 @@ class LeafFinder:
         logger.setLevel( self.m_logLevel )
         logger.info( f'================== { datetime.now() }  {pidName}')
 
-    def waitForFreeThread( self, src, main_thread_count, all_threads, timeout=None ) -> None:
+    def waitForFreeThread( self, src, main_thread_count, all_threads, copy_of_nodes, timeout=None ) -> None:
         ''' Wait for a free thread and remove names of completed threads from the queue '''
         logger = logging.getLogger()
-        logger.info(f'total={len(self.m_copy_of_nodes)},  current={src}')
+        logger.info(f'total = {len(copy_of_nodes)},  current = {src}')
         # if we already have our limit of threads, wait for a free one.
-        logger.debug( f'Threads in use: {threading.active_count() - main_thread_count}, all_theads size {len(all_threads)}   selected thread size: {self.m_threads}' )
+        logger.debug( f'Threads = {threading.active_count() - main_thread_count}, all_theads size = {len(all_threads)}   selected thread size = {self.m_threads}' )
         do_once = True
         while ( ((threading.active_count() - main_thread_count) >= self.m_threads) or (do_once) ):
             do_once = False
@@ -178,41 +174,41 @@ class LeafFinder:
             for thread_name in all_threads:
                 # if the thread is not in the running_threads list, remove it
                 if( thread_name not in running_thread_names ):
-                    logger.debug( f'removing expired thread: {thread_name}')
-                    self.m_copy_of_nodes.remove( thread_name )
+                    logger.debug( f'removing expired thread = {thread_name}')
+                    copy_of_nodes.remove( thread_name )
                     all_threads.remove( thread_name )  # this will also have issues
                 else:
                     for running_thread in threading.enumerate():
                         if( running_thread.name == thread_name ):
-                            logger.debug( f'waiting for up to {timeout} seconds for thread: {thread_name},  current={src}')
+                            logger.debug( f'waiting for up to {timeout} seconds for thread = {thread_name},  current = {src}')
                             running_thread.join( timeout=timeout ) # wait for 'timeout' second to see if thread exits
                             # if we joined, remove the src from the queue
                             if not running_thread.is_alive():
                                 logger.debug( f'removing joined thread: {thread_name}')
-                                self.m_copy_of_nodes.remove( thread_name )
+                                copy_of_nodes.remove( thread_name )
                                 all_threads.remove( thread_name )  # this will also have issues
-        self.updateQueueFile( self.m_copy_of_nodes )
+        self.updateQueueFile( copy_of_nodes )
 
 
-    def mpRsyncCopy( self ) -> None:
+    def threadedCopy( self ) -> None:
         ''' create m_threads processes of files and do rsyncCopy on each. '''
         logger = logging.getLogger()
         logger.info( f'Threads == {self.m_threads}' )
         # For each record in the queue, create a thread (up to m_threads) and process.  Once completed, remove the record and replace the thread.
         main_thread_count = threading.active_count()
         all_threads = []
-        self.m_copy_of_nodes = self.m_nodes.copy()
+        copy_of_nodes = self.m_nodes.copy()
         for src in self.m_nodes:
-            self.waitForFreeThread( src, main_thread_count, all_threads, timeout=5 )
-            logger.info( f'Files remaining: {len(copy_of_nodes)}, current={src}' )
+            self.waitForFreeThread( src, main_thread_count, all_threads, copy_of_nodes, timeout=5 )
+            logger.info( f'Files remaining = {len(copy_of_nodes)}, current = {src}' )
             # add a new thread for the next file
             current_thread = threading.Thread( target=self.rsyncFile, args=(f'{src}',), name=src )
-            logger.debug( f'created thread: {current_thread.name}')
+            logger.debug( f'created thread = {current_thread.name}')
             all_threads.append( current_thread.name )
             current_thread.start()
-        while ( len(self.m_copy_of_nodes) > 0 ):
-            logger.info( f'Waiting for {len(self.m_copy_of_nodes)} final thread(s).' )
-            self.waitForFreeThread( src, main_thread_count, all_threads )
+        while ( len(copy_of_nodes) > 0 ):
+            logger.info( f'Waiting for {len(copy_of_nodes)} final thread(s).' )
+            self.waitForFreeThread( src, main_thread_count, all_threads, copy_of_nodes )
 
     def loadQueue( self ) -> None:
         ''' load the previous file into the queue '''
@@ -272,13 +268,13 @@ class LeafFinder:
             else:
                 logger.info( f" ========================================    end: {datetime.now()}" )
                 return ERR.TARGET_PATH_DOES_NOT_EXIST
-        logger.info( f"Source = {self.m_sourcePath}" )
-        logger.info( f"Target = {self.m_targetPath}" )
+        logger.info( f"Source  = {self.m_sourcePath}" )
+        logger.info( f"Target  = {self.m_targetPath}" )
         logger.info( f"Threads = {self.m_threads}" )
         # load the previous list if it exists into m_nodes or generate a new one
         self.loadQueue()
         logger.info( f" ======================================== listed: {datetime.now()}" )
-        self.mpRsyncCopy()
+        self.threadedCopy()
         logger.info( f" ========================================    end: {datetime.now()}" )
         return ERR.OK
 
@@ -311,8 +307,8 @@ def logger_init( logLevel, tmpdir ):
     sh.setLevel( logging.INFO )
     logger.addHandler( sh )
     logging.info( f' ==================== { datetime.now() }')
-    logger.info( f'CWD={os.getcwd()}' )
-    logger.info( f'LogFile={logFilePath}' )
+    logger.info( f'CWD = {os.getcwd()}' )
+    logger.info( f'LogFile = {logFilePath}' )
     return ERR.OK
 
 
