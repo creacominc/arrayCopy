@@ -201,15 +201,15 @@ class LeafFinder:
         all_threads = []
         copy_of_nodes = self.m_nodes.copy()
         for src in self.m_nodes:
-            logger.info( f'Files remaining: {len(self.m_nodes)}, current={src}' )
             self.waitForFreeThread( src, main_thread_count, all_threads, copy_of_nodes, timeout=5 )
+            logger.info( f'Files remaining: {len(copy_of_nodes)}, current={src}' )
             # add a new thread for the next file
             current_thread = threading.Thread( target=self.rsyncFile, args=(f'{src}',), name=src )
             logger.debug( f'created thread: {current_thread.name}')
             all_threads.append( current_thread.name )
             current_thread.start()
         while ( len(copy_of_nodes) > 0 ):
-            logger.info( f'Waiting for {len(copy_of_nodes)} final threads.' )
+            logger.info( f'Waiting for {len(copy_of_nodes)} final thread(s).' )
             self.waitForFreeThread( src, main_thread_count, copy_of_nodes, all_threads )
 
     def loadQueue( self ) -> None:
