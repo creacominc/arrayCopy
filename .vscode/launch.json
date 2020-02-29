@@ -8,9 +8,12 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args":  [
-                "--source", "/tmp/test/source",
-                "--target", "/tmp/test/target/source",
-                "--threads", "2"
+                "--source", "/Volumes/VideoDrobo",
+                "--target", "/Volumes/BackupVideoD/VideoDrobo",
+                "--threads", "5",
+                "--tmpdir", "/Volumes/VideoDrobo/synclog",
+                "--log", "info",
+                "--execute"
             ]
         }
     ]
