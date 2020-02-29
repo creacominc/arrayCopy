@@ -294,7 +294,7 @@ def logger_init( logLevel, tmpdir ):
     else:
         logFilePath = 'mtFileCopy.control.log'
     # add rotating file handler
-    rfh = RotatingFileHandler( filename=logFilePath, mode='a', maxBytes=1024000, backupCount=9 )
+    rfh = RotatingFileHandler( filename=logFilePath, mode='a', maxBytes=10240000, backupCount=19 )
     # if the log file already exists and is not empty, do a rollover
     if( os.path.exists( logFilePath ) and os.path.getsize( logFilePath ) ):
         rfh.doRollover()
