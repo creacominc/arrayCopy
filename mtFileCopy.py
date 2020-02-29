@@ -32,6 +32,7 @@ class LeafFinder:
     m_sourcePath = ""
     m_targetPath = ""
     m_nodes = []
+    m_copy_of_nodes = []
     m_logLevel   = logging.INFO
     m_dry = True
     m_move = False
@@ -54,6 +55,7 @@ class LeafFinder:
         self.m_sourcePath = args.source
         self.m_targetPath = args.target
         self.m_nodes = []
+        self.m_copy_of_nodes = []
         self.m_dry = not args.execute
         self.m_move = args.move
         self.m_fast = args.fast
@@ -158,10 +160,10 @@ class LeafFinder:
         logger.setLevel( self.m_logLevel )
         logger.info( f'================== { datetime.now() }  {pidName}')
 
-    def waitForFreeThread( self, src, main_thread_count, all_threads, copy_of_nodes, timeout=None ) -> None:
+    def waitForFreeThread( self, src, main_thread_count, all_threads, timeout=None ) -> None:
         ''' Wait for a free thread and remove names of completed threads from the queue '''
         logger = logging.getLogger()
-        logger.info(f'total={len(copy_of_nodes)},  current={src}')
+        logger.info(f'total={len(self.m_copy_of_nodes)},  current={src}')
         # if we already have our limit of threads, wait for a free one.
         logger.debug( f'Threads in use: {threading.active_count() - main_thread_count}, all_theads size {len(all_threads)}   selected thread size: {self.m_threads}' )
         do_once = True
@@ -177,7 +179,7 @@ class LeafFinder:
                 # if the thread is not in the running_threads list, remove it
                 if( thread_name not in running_thread_names ):
                     logger.debug( f'removing expired thread: {thread_name}')
-                    copy_of_nodes.remove( thread_name )
+                    self.m_copy_of_nodes.remove( thread_name )
                     all_threads.remove( thread_name )  # this will also have issues
                 else:
                     for running_thread in threading.enumerate():
@@ -187,9 +189,9 @@ class LeafFinder:
                             # if we joined, remove the src from the queue
                             if not running_thread.is_alive():
                                 logger.debug( f'removing joined thread: {thread_name}')
-                                copy_of_nodes.remove( thread_name )
+                                self.m_copy_of_nodes.remove( thread_name )
                                 all_threads.remove( thread_name )  # this will also have issues
-        self.updateQueueFile( copy_of_nodes )
+        self.updateQueueFile( self.m_copy_of_nodes )
 
 
     def mpRsyncCopy( self ) -> None:
@@ -199,18 +201,18 @@ class LeafFinder:
         # For each record in the queue, create a thread (up to m_threads) and process.  Once completed, remove the record and replace the thread.
         main_thread_count = threading.active_count()
         all_threads = []
-        copy_of_nodes = self.m_nodes.copy()
+        self.m_copy_of_nodes = self.m_nodes.copy()
         for src in self.m_nodes:
-            self.waitForFreeThread( src, main_thread_count, all_threads, copy_of_nodes, timeout=5 )
+            self.waitForFreeThread( src, main_thread_count, all_threads, timeout=5 )
             logger.info( f'Files remaining: {len(copy_of_nodes)}, current={src}' )
             # add a new thread for the next file
             current_thread = threading.Thread( target=self.rsyncFile, args=(f'{src}',), name=src )
             logger.debug( f'created thread: {current_thread.name}')
             all_threads.append( current_thread.name )
             current_thread.start()
-        while ( len(copy_of_nodes) > 0 ):
-            logger.info( f'Waiting for {len(copy_of_nodes)} final thread(s).' )
-            self.waitForFreeThread( src, main_thread_count, copy_of_nodes, all_threads )
+        while ( len(self.m_copy_of_nodes) > 0 ):
+            logger.info( f'Waiting for {len(self.m_copy_of_nodes)} final thread(s).' )
+            self.waitForFreeThread( src, main_thread_count, all_threads )
 
     def loadQueue( self ) -> None:
         ''' load the previous file into the queue '''
