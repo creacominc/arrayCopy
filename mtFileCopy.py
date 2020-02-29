@@ -4,7 +4,7 @@
 Given a source path and a destination path where the last element of the path matches,
 find the leaf nodes of the source folder tree.
 """
-
+import os
 import os.path
 import logging
 import argparse
@@ -239,10 +239,13 @@ class LeafFinder:
         ''' write the m_nodes to the queue file in case the backup stops before completing. '''
         logger = logging.getLogger()
         queueFileName = os.path.join( self.m_tmpdir, self.m_queueFileName )
-        logger.info( f'Writing {len(queue)} records to queue file {queueFileName}' )
-        with open( queueFileName, 'w' ) as outf:
+        tmp_queueFileName = queueFileName + f'.{os.getpid()}.tmp'
+        logger.info( f'Writing {len(queue)} records to queue file {tmp_queueFileName}' )
+        with open( tmp_queueFileName, 'w' ) as outf:
             for line in queue:
                 outf.write( f'{line}{os.linesep}' )
+        # move the temporary file to the queue file location
+        os.replace( tmp_queueFileName, queueFileName, )
 
     def run( self ) -> int:
         '''Verify that the source and target exist and are the same folder name, then find the leaf nodes of the source.'''
