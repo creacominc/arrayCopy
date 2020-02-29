@@ -218,7 +218,7 @@ class LeafFinder:
         action = ""
         direction = ""
         queueFileName = os.path.join( self.m_tmpdir, self.m_queueFileName )
-        if( os.path.exists( queueFileName )  and  os.path.isfile( queueFileName ) ):
+        if( os.path.exists( queueFileName )  and  os.path.isfile( queueFileName ) and os.path.getsize( queueFileName ) ):
             logger.info( f'Loading previous queue from {queueFileName}' )
             action = "Loaded"
             direction = "from"
