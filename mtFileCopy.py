@@ -9,6 +9,7 @@ import os.path
 import logging
 import argparse
 import sys
+import time
 import subprocess
 from datetime import datetime
 from enum import Enum, auto
@@ -39,6 +40,7 @@ class LeafFinder:
     m_create = False
     m_tmpdir = "."
     m_queueFileName = ""
+    m_lastUpdateTime = 0
 
     m_ignoreFiles = [ ".DocumentRevisions-V100",
                       ".Spotlight-V100",
@@ -61,6 +63,7 @@ class LeafFinder:
         self.m_create = args.create
         self.m_tmpdir = args.tmpdir
         self.m_queueFileName = args.queue
+        self.m_lastUpdateTime = time.time()
 
     def confirmFolderExists( self, path ) -> bool:
         """ return true if the path is a folder that exists """
@@ -78,16 +81,19 @@ class LeafFinder:
 
     def findAllLeafNodes( self, currentPath ):
         logger = logging.getLogger()
-        # if the current is in the ignore  list, skip it
+        # if the current is in the ignore list, skip it
         if os.path.basename( currentPath ) in self.m_ignoreFiles:
             logger.warning( f'Ignoring { os.path.join( self.m_sourcePath, currentPath ) }')
             return
-        # if the path is a folder, iterate of the contents can call this function recursively
+        # if the path is a folder and not a link, iterate of the contents can call this function recursively
         fullCurrent = os.path.join( self.m_sourcePath, currentPath )
-        if os.path.isdir( fullCurrent ):
-            for child in os.listdir( fullCurrent ):
-                self.findAllLeafNodes( os.path.join( currentPath, child ) )
-            return
+        if( os.path.islink( fullCurrent ) ):
+            logger.debug( f'Not following link { os.path.join( self.m_sourcePath, fullCurrent ) }')
+        else:
+            if( os.path.isdir( fullCurrent ) ):
+                for child in os.listdir( fullCurrent ):
+                    self.findAllLeafNodes( os.path.join( currentPath, child ) )
+                return
         # add the leaf node.
         logger.debug( f"Adding leaf node: {currentPath}" )
         self.m_nodes.append( currentPath )
@@ -187,7 +193,10 @@ class LeafFinder:
                                 logger.debug( f'removing joined thread: {thread_name}')
                                 copy_of_nodes.remove( thread_name )
                                 all_threads.remove( thread_name )  # this will also have issues
-        self.updateQueueFile( copy_of_nodes )
+        current_time = time.time()
+        if( current_time > (self.m_lastUpdateTime + 60) ):
+            self.updateQueueFile( copy_of_nodes )
+            self.m_lastUpdateTime = current_time
 
 
     def threadedCopy( self ) -> None:
