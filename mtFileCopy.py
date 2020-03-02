@@ -28,7 +28,7 @@ class ERR(Enum):
 
 
 class LeafFinder:
-    """Multi-threaded leaf-node finder"""
+    '''Multi-threaded leaf-node finder'''
     m_threads = 1
     m_sourcePath = ""
     m_targetPath = ""
@@ -169,6 +169,7 @@ class LeafFinder:
         # if we already have our limit of threads, wait for a free one.
         logger.debug( f'Threads = {threading.active_count() - main_thread_count}, all_theads size = {len(all_threads)}   selected thread size = {self.m_threads}' )
         do_once = True
+        # at least once and while the number of threads is the number allowed or more, try to join threads.
         while ( ((threading.active_count() - main_thread_count) >= self.m_threads) or (do_once) ):
             do_once = False
             logger.debug( f'Total threads = {threading.active_count()}' )
@@ -193,8 +194,9 @@ class LeafFinder:
                                 logger.debug( f'removing joined thread: {thread_name}')
                                 copy_of_nodes.remove( thread_name )
                                 all_threads.remove( thread_name )  # this will also have issues
+        # if 60 seconds have passed or the queue is now empty, write the file
         current_time = time.time()
-        if( current_time > (self.m_lastUpdateTime + 60) ):
+        if( ( current_time > (self.m_lastUpdateTime + 60) )  or ( len(copy_of_nodes) == 0  ) ):
             self.updateQueueFile( copy_of_nodes )
             self.m_lastUpdateTime = current_time
 
@@ -207,24 +209,28 @@ class LeafFinder:
         main_thread_count = threading.active_count()
         all_threads = []
         copy_of_nodes = self.m_nodes.copy()
+        # for each entry in the queue, wait for a free thread then create a new thread to do the copy
         for src in self.m_nodes:
             self.waitForFreeThread( src, main_thread_count, all_threads, copy_of_nodes, timeout=5 )
             logger.info( f'Files remaining = {len(copy_of_nodes)}, current = {src}' )
             # add a new thread for the next file
             current_thread = threading.Thread( target=self.rsyncFile, args=(f'{src}',), name=src )
             logger.debug( f'created thread = {current_thread.name}')
+            # add the name of the new thread to the collection of thread names
             all_threads.append( current_thread.name )
             current_thread.start()
+        # when done with all the files, wait for the last threads before returning
         while ( len(copy_of_nodes) > 0 ):
             logger.info( f'Waiting for {len(copy_of_nodes)} final thread(s).' )
             self.waitForFreeThread( src, main_thread_count, all_threads, copy_of_nodes )
 
     def loadQueue( self ) -> None:
-        ''' load the previous file into the queue '''
+        ''' load the previous file or build a new queue '''
         logger = logging.getLogger()
         action = ""
         direction = ""
         queueFileName = os.path.join( self.m_tmpdir, self.m_queueFileName )
+        # if the file exists and is not empty, load it
         if( os.path.exists( queueFileName )  and  os.path.isfile( queueFileName ) and os.path.getsize( queueFileName ) ):
             logger.info( f'Loading previous queue from {queueFileName}' )
             action = "Loaded"
