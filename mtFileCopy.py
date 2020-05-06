@@ -4,6 +4,10 @@
 Given a source path and a destination path where the last element of the path matches,
 find the leaf nodes of the source folder tree.
 """
+
+"""
+Git repo:  git@github.com:creacominc/mtFileCopy.git
+"""
 import os
 import os.path
 import logging
